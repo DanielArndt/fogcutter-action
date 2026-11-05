@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
+# SPDX-License-Identifier: Apache-2.0
+
+# Fixture for CI: one blocker that is resolved and one that is not.
+repository: DanielArndt/fogcutter-action
+
+blockers:
+  # DanielArndt/fogcutter#2 is closed as completed, so this resolves.
+  - id: closed-issue
+    description: "Resolved: a closed upstream issue"
+    source:
+      type: github-issue
+      repo: DanielArndt/fogcutter
+      issue: 2
+      reason: completed
+
+  # No such release exists, so this stays unresolved.
+  - id: future-release
+    description: "Unresolved: a release that does not exist"
+    source:
+      type: github-release
+      repo: DanielArndt/fogcutter
+      version: ">=v999.0.0"
