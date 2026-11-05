@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
+# SPDX-License-Identifier: Apache-2.0
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lint action and workflows
+        run: docker run --rm -v "$PWD:/repo" --workdir /repo rhysd/actionlint:1.7.12 -color
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-24.04
+          - ubuntu-24.04-arm
+          - macos-15
+          - macos-15-intel
+          - windows-2025
+          - windows-11-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run the action in dry-run mode
+        id: fogcutter
+        uses: ./
+        with:
+          config: testdata/blockers.yaml
+          dry_run: true
+      - name: Check outputs
+        shell: bash
+        env:
+          TOTAL: ${{ steps.fogcutter.outputs.total_blockers }}
+          RESOLVED: ${{ steps.fogcutter.outputs.resolved_count }}
+          HAS_RESOLVED: ${{ steps.fogcutter.outputs.has_resolved }}
+          RESOLVED_JSON: ${{ steps.fogcutter.outputs.resolved_json }}
+        run: |
+          set -euo pipefail
+          echo "total=${TOTAL} resolved=${RESOLVED} has_resolved=${HAS_RESOLVED}"
+          echo "${RESOLVED_JSON}"
+          [ "${TOTAL}" = "2" ]
+          [ "${RESOLVED}" = "1" ]
+          [ "${HAS_RESOLVED}" = "true" ]
+          echo "${RESOLVED_JSON}" | grep -q closed-issue
+      - name: Fail on resolved
+        id: fail_on_resolved
+        uses: ./
+        continue-on-error: true
+        with:
+          config: testdata/blockers.yaml
+          dry_run: true
+          fail_on_resolved: true
+      - name: Check fail_on_resolved failed the step
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.fail_on_resolved.outcome }}
+        run: '[ "${OUTCOME}" = "failure" ]'
