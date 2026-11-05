@@ -76,7 +76,7 @@ The Action is a composite action (`action.yml`) written in Bash. There is no bui
 Releases are automated with **[Release Please](https://github.com/googleapis/release-please)**, which reads the Conventional Commits on `main`. The Action is versioned independently of the fogcutter CLI.
 
 1. `fix` produces a patch release, `feat` a minor release and a breaking change a major release.
-2. Release Please maintains a Release PR that updates `CHANGELOG.md` and `version.txt`. Merging it tags the release and creates a GitHub Release.
+2. Release Please maintains a Release PR that updates `CHANGELOG.md` and `.release-please-manifest.json`. Merging it tags the release and creates a GitHub Release.
 3. The workflow then moves the floating major tag (for example `v1`) to the new release.
 4. When fogcutter publishes a release, a daily workflow opens a `fix(deps)` PR that bumps the default `version` input in `action.yml`. Merging it produces a patch release of the Action.
 
