@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Daniel Arndt <dan@arndt.ca>
+# SPDX-License-Identifier: Apache-2.0
+
+name: Bump fogcutter
+
+# Opens a PR that updates the default `version` input in action.yml whenever a
+# new fogcutter release is published.
+on:
+  schedule:
+    - cron: "17 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bump:
+    runs-on: ubuntu-24.04
+    steps:
+      # PRs opened with the default GITHUB_TOKEN do not trigger the required checks
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - name: Open a PR if there is a newer fogcutter release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          latest="$(gh release view --repo DanielArndt/fogcutter --json tagName --jq .tagName)"
+          latest="${latest#v}"
+          current="$(awk '/^  version:/ {found=1} found && /default:/ {gsub(/[" ]/, "", $2); print $2; exit}' action.yml)"
+          echo "current=${current} latest=${latest}"
+          if [ -z "${current}" ] || [ -z "${latest}" ]; then
+            echo "::error::Could not determine the current or latest version"
+            exit 1
+          fi
+          if [ "${current}" = "${latest}" ]; then
+            echo "Already up to date"
+            exit 0
+          fi
+          branch="bump-fogcutter-${latest}"
+          if [ -n "$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')" ]; then
+            echo "PR for ${latest} is already open"
+            exit 0
+          fi
+          sed -i "/^  version:/,/default:/ s/default: \"${current}\"/default: \"${latest}\"/" action.yml
+          git diff --quiet && { echo "::error::action.yml was not updated"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "${branch}"
+          git commit -am "fix(deps): bump default fogcutter version to ${latest}"
+          git push origin "${branch}"
+          gh pr create \
+            --title "fix(deps): bump default fogcutter version to ${latest}" \
+            --body "Updates the default \`version\` input to the [fogcutter v${latest} release](https://github.com/DanielArndt/fogcutter/releases/tag/v${latest})."
