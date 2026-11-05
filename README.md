@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.svg" alt="fogcutter-action logo: a small tugboat cutting through fog" width="160">
+</p>
+
 # fogcutter-action
 
 [![CI](https://github.com/DanielArndt/fogcutter-action/actions/workflows/ci.yml/badge.svg)](https://github.com/DanielArndt/fogcutter-action/actions/workflows/ci.yml)
